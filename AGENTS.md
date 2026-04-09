@@ -50,6 +50,7 @@
 ### 核心模块说明
 
 #### `src/extension.ts`
+
 - 导出 `activate` 与 `deactivate` 函数。
 - 在 `activate` 中：
   1. 实例化 `HistoryTreeProvider` 并注册到 `jumpHistory` Tree View。
@@ -62,6 +63,7 @@
   - 若匹配，则将 `from → to` 的跳转记录压入 `HistoryTreeProvider`。
 
 #### `src/historyTreeProvider.ts`
+
 - `JumpRecord` 接口：描述一次跳转（from、to、timestamp）。
 - `HistoryTreeProvider`：实现 `vscode.TreeDataProvider<HistoryNode>`，内部维护一个 `JumpRecord[]` 堆栈。
 - `buildPath()` 将堆栈从底向上构建为嵌套树节点（每个节点只有一个子节点），形成一条线性链路。
@@ -140,11 +142,11 @@ pnpm run watch
 
 ## 快速参考
 
-| 操作 | 命令 |
-|------|------|
-| 编译 | `pnpm run compile` |
-| 监听编译 | `pnpm run watch` |
-| 调试 | 按 `F5`（Run Extension） |
-| 打包 | `vsce package` |
-| 清空历史 | `jumpHistory.clear` |
+| 操作     | 命令                       |
+| -------- | -------------------------- |
+| 编译     | `pnpm run compile`         |
+| 监听编译 | `pnpm run watch`           |
+| 调试     | 按 `F5`（Run Extension）   |
+| 打包     | `vsce package`             |
+| 清空历史 | `jumpHistory.clear`        |
 | 回跳位置 | `jumpHistory.goToLocation` |

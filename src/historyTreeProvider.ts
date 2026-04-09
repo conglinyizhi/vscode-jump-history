@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
-import * as path from "path";
+import * as vscode from 'vscode';
+import * as path from 'path';
 
 export interface JumpRecord {
   from: { uri: vscode.Uri; range: vscode.Range };
@@ -8,9 +8,7 @@ export interface JumpRecord {
 }
 
 export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<
-    HistoryNode | undefined | void
-  >();
+  private _onDidChangeTreeData = new vscode.EventEmitter<HistoryNode | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private stack: JumpRecord[] = [];
@@ -40,12 +38,7 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     let nextNode: HistoryNode | undefined;
     for (let i = this.stack.length - 1; i >= 0; i--) {
       const record = this.stack[i];
-      const node = new HistoryNode(
-        record,
-        nextNode ? [nextNode] : [],
-        i,
-        this.expanded,
-      );
+      const node = new HistoryNode(record, nextNode ? [nextNode] : [], i, this.expanded);
       nextNode = node;
     }
 
@@ -81,7 +74,7 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     this._onDidChangeTreeData.fire();
     // 通过 TreeView API 折叠所有节点
     if (this.treeView) {
-      await vscode.commands.executeCommand("workbench.actions.treeView.jumpHistory.collapseAll");
+      await vscode.commands.executeCommand('workbench.actions.treeView.jumpHistory.collapseAll');
     }
   }
 
@@ -112,10 +105,7 @@ export class HistoryNode extends vscode.TreeItem {
     const fromFile = path.basename(record.from.uri.fsPath);
 
     // 读取跳转之前（来源位置）的代码内容
-    const codeLine = readLineFromFile(
-      record.from.uri,
-      record.from.range.start.line,
-    );
+    const codeLine = readLineFromFile(record.from.uri, record.from.range.start.line);
 
     super(
       `${fromFile}:${fromLine} → ${toFile}:${toLine}`,
@@ -127,15 +117,15 @@ export class HistoryNode extends vscode.TreeItem {
     );
 
     this.children = children;
-    this.description = codeLine ? `  ${codeLine.trim()}` : "";
+    this.description = codeLine ? `  ${codeLine.trim()}` : '';
     this.tooltip = `From: ${record.from.uri.fsPath}:${fromLine}\nTo: ${record.to.uri.fsPath}:${toLine}`;
     this.command = {
-      command: "jumpHistory.goToLocation",
-      title: "Go to Location",
+      command: 'jumpHistory.goToLocation',
+      title: 'Go to Location',
       arguments: [record.from],
     };
-    this.iconPath = new vscode.ThemeIcon("arrow-right");
-    this.contextValue = "jumpRecord";
+    this.iconPath = new vscode.ThemeIcon('arrow-right');
+    this.contextValue = 'jumpRecord';
   }
 }
 
@@ -144,9 +134,7 @@ export class HistoryNode extends vscode.TreeItem {
  */
 function readLineFromFile(uri: vscode.Uri, line: number): string | undefined {
   try {
-    const doc = vscode.workspace.textDocuments.find(
-      (d) => d.uri.toString() === uri.toString(),
-    );
+    const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     if (doc && line >= 0 && line < doc.lineCount) {
       return doc.lineAt(line).text;
     }
