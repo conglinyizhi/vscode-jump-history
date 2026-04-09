@@ -41,7 +41,7 @@
 
 ## 📝 声明
 
-- 本项目使用 [**kimi-cli**](https://moonshotai.github.io/kimi-cli/) 辅助构建。
+- 本项目使用 [**kimi-cli**](https://moonshotai.github.io/kimi-cli/) 与 [**Qwen Code CLI**](https://qwen.ai/qwencode) 完成编写。
 - 项目中绝大多数代码由 LLM 生成，属于 **Vibe Coding** 实践产物。
 
 ## 📜 许可证
