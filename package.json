@@ -1,0 +1,55 @@
+{
+  "name": "vscode-jump-history",
+  "displayName": "Jump History",
+  "description": "自动记录 Ctrl+点击 和 Go to Definition 的跳转堆栈",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "jumpHistory",
+          "name": "Jump History"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "jumpHistory.clear",
+        "title": "Clear Jump History",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "jumpHistory.goToLocation",
+        "title": "Go to Location"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "jumpHistory.clear",
+          "when": "view == jumpHistory",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
