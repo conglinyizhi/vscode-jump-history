@@ -78,7 +78,7 @@ export class HistoryNode extends vscode.TreeItem {
         this.command = {
             command: 'jumpHistory.goToLocation',
             title: 'Go to Location',
-            arguments: [record.to]
+            arguments: [record.from]
         };
         this.iconPath = new vscode.ThemeIcon('arrow-right');
         this.contextValue = 'jumpRecord';
