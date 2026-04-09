@@ -67,13 +67,16 @@ export class HistoryNode extends vscode.TreeItem {
         const toFile = path.basename(record.to.uri.fsPath);
         const fromFile = path.basename(record.from.uri.fsPath);
 
+        // 读取目标行的代码内容
+        const codeLine = readLineFromFile(record.to.uri, record.to.range.start.line);
+
         super(
-            `${toFile}:${toLine}`,
+            `${fromFile}:${fromLine} → ${toFile}:${toLine}`,
             children.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
         );
 
         this.children = children;
-        this.description = `← ${fromFile}:${fromLine}`;
+        this.description = codeLine ? `  ${codeLine.trim()}` : '';
         this.tooltip = `From: ${record.from.uri.fsPath}:${fromLine}\nTo: ${record.to.uri.fsPath}:${toLine}`;
         this.command = {
             command: 'jumpHistory.goToLocation',
@@ -83,4 +86,19 @@ export class HistoryNode extends vscode.TreeItem {
         this.iconPath = new vscode.ThemeIcon('arrow-right');
         this.contextValue = 'jumpRecord';
     }
+}
+
+/**
+ * 从指定 uri 的文档中读取某一行的内容
+ */
+function readLineFromFile(uri: vscode.Uri, line: number): string | undefined {
+    try {
+        const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+        if (doc && line >= 0 && line < doc.lineCount) {
+            return doc.lineAt(line).text;
+        }
+    } catch {
+        // 忽略读取失败的情况
+    }
+    return undefined;
 }
