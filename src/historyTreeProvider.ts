@@ -67,8 +67,8 @@ export class HistoryNode extends vscode.TreeItem {
         const toFile = path.basename(record.to.uri.fsPath);
         const fromFile = path.basename(record.from.uri.fsPath);
 
-        // 读取目标行的代码内容
-        const codeLine = readLineFromFile(record.to.uri, record.to.range.start.line);
+        // 读取跳转之前（来源位置）的代码内容
+        const codeLine = readLineFromFile(record.from.uri, record.from.range.start.line);
 
         super(
             `${fromFile}:${fromLine} → ${toFile}:${toLine}`,
