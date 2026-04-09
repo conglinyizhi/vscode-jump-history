@@ -3,6 +3,14 @@
   "displayName": "Jump History",
   "description": "自动记录 Ctrl+点击 和 Go to Definition 的跳转堆栈",
   "version": "0.0.1",
+  "author": {
+    "name": "conglinyizhi",
+    "url": "https://github.com/conglinyizhi"
+  },
+  "repository": {
+    "url": "https://github.com/conglinyizhi/vscode-jump-history"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.74.0"
   },
