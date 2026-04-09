@@ -1,104 +1,157 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
+import * as vscode from "vscode";
+import * as path from "path";
 
 export interface JumpRecord {
-    from: { uri: vscode.Uri; range: vscode.Range };
-    to: { uri: vscode.Uri; range: vscode.Range };
-    timestamp: number;
+  from: { uri: vscode.Uri; range: vscode.Range };
+  to: { uri: vscode.Uri; range: vscode.Range };
+  timestamp: number;
 }
 
 export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode> {
-    private _onDidChangeTreeData = new vscode.EventEmitter<HistoryNode | undefined | void>();
-    readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData = new vscode.EventEmitter<
+    HistoryNode | undefined | void
+  >();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-    private stack: JumpRecord[] = [];
+  private stack: JumpRecord[] = [];
+  private expanded: boolean = true; // 默认全部展开
+  private treeView: vscode.TreeView<HistoryNode> | undefined;
 
-    getTreeItem(element: HistoryNode): vscode.TreeItem {
-        return element;
+  registerTreeView(treeView: vscode.TreeView<HistoryNode>) {
+    this.treeView = treeView;
+  }
+
+  getTreeItem(element: HistoryNode): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: HistoryNode): Thenable<HistoryNode[]> {
+    if (!element) {
+      return Promise.resolve(this.buildPath());
+    }
+    return Promise.resolve(element.children);
+  }
+
+  private buildPath(): HistoryNode[] {
+    if (this.stack.length === 0) {
+      return [];
     }
 
-    getChildren(element?: HistoryNode): Thenable<HistoryNode[]> {
-        if (!element) {
-            return Promise.resolve(this.buildPath());
-        }
-        return Promise.resolve(element.children);
+    let nextNode: HistoryNode | undefined;
+    for (let i = this.stack.length - 1; i >= 0; i--) {
+      const record = this.stack[i];
+      const node = new HistoryNode(
+        record,
+        nextNode ? [nextNode] : [],
+        i,
+        this.expanded,
+      );
+      nextNode = node;
     }
 
-    private buildPath(): HistoryNode[] {
-        if (this.stack.length === 0) {
-            return [];
-        }
+    return nextNode ? [nextNode] : [];
+  }
 
-        let nextNode: HistoryNode | undefined;
-        for (let i = this.stack.length - 1; i >= 0; i--) {
-            const record = this.stack[i];
-            const node = new HistoryNode(
-                record,
-                nextNode ? [nextNode] : [],
-                i
-            );
-            nextNode = node;
-        }
+  addJump(record: JumpRecord) {
+    this.stack.push(record);
+    // 新增节点时自动展开
+    this.expanded = true;
+    this._onDidChangeTreeData.fire();
+  }
 
-        return nextNode ? [nextNode] : [];
+  clear() {
+    this.stack = [];
+    this._onDidChangeTreeData.fire();
+  }
+
+  async expandAll() {
+    this.expanded = true;
+    this._onDidChangeTreeData.fire();
+    // 通过 TreeView API 递归展开所有节点
+    if (this.treeView) {
+      const roots = await this.getChildren();
+      for (const root of roots) {
+        await this.expandNode(root);
+      }
     }
+  }
 
-    addJump(record: JumpRecord) {
-        this.stack.push(record);
-        this._onDidChangeTreeData.fire();
+  async collapseAll() {
+    this.expanded = false;
+    this._onDidChangeTreeData.fire();
+    // 通过 TreeView API 折叠所有节点
+    if (this.treeView) {
+      await vscode.commands.executeCommand("workbench.actions.treeView.jumpHistory.collapseAll");
     }
+  }
 
-    clear() {
-        this.stack = [];
-        this._onDidChangeTreeData.fire();
+  private async expandNode(node: HistoryNode) {
+    await this.treeView!.reveal(node, { expand: true, focus: false, select: false });
+    for (const child of node.children) {
+      await this.expandNode(child);
     }
+  }
+
+  isExpanded(): boolean {
+    return this.expanded;
+  }
 }
 
 export class HistoryNode extends vscode.TreeItem {
-    children: HistoryNode[] = [];
+  children: HistoryNode[] = [];
 
-    constructor(
-        public readonly record: JumpRecord,
-        children: HistoryNode[],
-        public readonly depth: number
-    ) {
-        const toLine = record.to.range.start.line + 1;
-        const fromLine = record.from.range.start.line + 1;
-        const toFile = path.basename(record.to.uri.fsPath);
-        const fromFile = path.basename(record.from.uri.fsPath);
+  constructor(
+    public readonly record: JumpRecord,
+    children: HistoryNode[],
+    public readonly depth: number,
+    expanded: boolean,
+  ) {
+    const toLine = record.to.range.start.line + 1;
+    const fromLine = record.from.range.start.line + 1;
+    const toFile = path.basename(record.to.uri.fsPath);
+    const fromFile = path.basename(record.from.uri.fsPath);
 
-        // 读取跳转之前（来源位置）的代码内容
-        const codeLine = readLineFromFile(record.from.uri, record.from.range.start.line);
+    // 读取跳转之前（来源位置）的代码内容
+    const codeLine = readLineFromFile(
+      record.from.uri,
+      record.from.range.start.line,
+    );
 
-        super(
-            `${fromFile}:${fromLine} → ${toFile}:${toLine}`,
-            children.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
-        );
+    super(
+      `${fromFile}:${fromLine} → ${toFile}:${toLine}`,
+      children.length > 0
+        ? expanded
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None,
+    );
 
-        this.children = children;
-        this.description = codeLine ? `  ${codeLine.trim()}` : '';
-        this.tooltip = `From: ${record.from.uri.fsPath}:${fromLine}\nTo: ${record.to.uri.fsPath}:${toLine}`;
-        this.command = {
-            command: 'jumpHistory.goToLocation',
-            title: 'Go to Location',
-            arguments: [record.from]
-        };
-        this.iconPath = new vscode.ThemeIcon('arrow-right');
-        this.contextValue = 'jumpRecord';
-    }
+    this.children = children;
+    this.description = codeLine ? `  ${codeLine.trim()}` : "";
+    this.tooltip = `From: ${record.from.uri.fsPath}:${fromLine}\nTo: ${record.to.uri.fsPath}:${toLine}`;
+    this.command = {
+      command: "jumpHistory.goToLocation",
+      title: "Go to Location",
+      arguments: [record.from],
+    };
+    this.iconPath = new vscode.ThemeIcon("arrow-right");
+    this.contextValue = "jumpRecord";
+  }
 }
 
 /**
  * 从指定 uri 的文档中读取某一行的内容
  */
 function readLineFromFile(uri: vscode.Uri, line: number): string | undefined {
-    try {
-        const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
-        if (doc && line >= 0 && line < doc.lineCount) {
-            return doc.lineAt(line).text;
-        }
-    } catch {
-        // 忽略读取失败的情况
+  try {
+    const doc = vscode.workspace.textDocuments.find(
+      (d) => d.uri.toString() === uri.toString(),
+    );
+    if (doc && line >= 0 && line < doc.lineCount) {
+      return doc.lineAt(line).text;
     }
-    return undefined;
+  } catch {
+    // 忽略读取失败的情况
+  }
+  return undefined;
 }

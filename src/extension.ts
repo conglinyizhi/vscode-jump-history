@@ -8,7 +8,11 @@ let isNavigatingFromHistory = false;
 
 export function activate(context: vscode.ExtensionContext) {
     historyProvider = new HistoryTreeProvider();
-    vscode.window.registerTreeDataProvider('jumpHistory', historyProvider);
+    const treeView = vscode.window.createTreeView('jumpHistory', {
+        treeDataProvider: historyProvider,
+    });
+    historyProvider.registerTreeView(treeView);
+    context.subscriptions.push(treeView);
 
     const updateLastPosition = (editor: vscode.TextEditor | undefined) => {
         if (editor) {
@@ -36,6 +40,18 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('jumpHistory.clear', () => {
             historyProvider.clear();
             updateLastPosition(vscode.window.activeTextEditor);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('jumpHistory.expandAll', () => {
+            historyProvider.expandAll();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('jumpHistory.collapseAll', () => {
+            historyProvider.collapseAll();
         })
     );
 

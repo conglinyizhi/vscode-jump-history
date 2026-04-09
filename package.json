@@ -39,10 +39,30 @@
       {
         "command": "jumpHistory.goToLocation",
         "title": "Go to Location"
+      },
+      {
+        "command": "jumpHistory.expandAll",
+        "title": "Expand All",
+        "icon": "$(expand-all)"
+      },
+      {
+        "command": "jumpHistory.collapseAll",
+        "title": "Collapse All",
+        "icon": "$(collapse-all)"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "jumpHistory.expandAll",
+          "when": "view == jumpHistory",
+          "group": "navigation"
+        },
+        {
+          "command": "jumpHistory.collapseAll",
+          "when": "view == jumpHistory",
+          "group": "navigation"
+        },
         {
           "command": "jumpHistory.clear",
           "when": "view == jumpHistory",
