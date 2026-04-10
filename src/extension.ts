@@ -5,6 +5,7 @@ let historyProvider: HistoryTreeProvider;
 let lastPosition: { uri: vscode.Uri; range: vscode.Range } | undefined;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let isNavigatingFromHistory = false;
+let lastHistoryTarget: { uri: vscode.Uri; range: vscode.Range } | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   historyProvider = new HistoryTreeProvider();
@@ -78,6 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
       'jumpHistory.goToLocation',
       async (location: { uri: vscode.Uri; range: vscode.Range }) => {
         isNavigatingFromHistory = true;
+        lastHistoryTarget = location;
         try {
           const doc = await vscode.workspace.openTextDocument(location.uri);
           const editor = await vscode.window.showTextDocument(doc);
@@ -87,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
         } finally {
           setTimeout(() => {
             isNavigatingFromHistory = false;
-          }, 300);
+          }, 800);
         }
       },
     ),
@@ -96,6 +98,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function checkAndRecordJump(uri: vscode.Uri, range: vscode.Range) {
   if (isNavigatingFromHistory) {
+    lastPosition = { uri, range };
     return;
   }
 
@@ -120,6 +123,17 @@ async function checkAndRecordJump(uri: vscode.Uri, range: vscode.Range) {
   debounceTimer = setTimeout(async () => {
     if (isNavigatingFromHistory) {
       lastPosition = { uri, range };
+      return;
+    }
+
+    // 如果当前位置恰好是最近一次历史回跳的目标位置，说明是回跳的副作用，不应记录
+    if (
+      lastHistoryTarget &&
+      lastHistoryTarget.uri.toString() === uri.toString() &&
+      lastHistoryTarget.range.start.line === range.start.line
+    ) {
+      lastPosition = { uri, range };
+      lastHistoryTarget = undefined;
       return;
     }
 
