@@ -15,6 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
   historyProvider.registerTreeView(treeView);
   context.subscriptions.push(treeView);
+  context.subscriptions.push({ dispose: () => historyProvider.dispose() });
 
   const updateLastPosition = (editor: vscode.TextEditor | undefined) => {
     if (editor) {
@@ -35,6 +36,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((e) => {
       checkAndRecordJump(e.textEditor.document.uri, e.selections[0]);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeVisibleTextEditors(() => {
+      historyProvider.refreshDecorations();
     }),
   );
 

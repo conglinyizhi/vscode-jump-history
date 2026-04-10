@@ -7,6 +7,21 @@ export interface JumpRecord {
   timestamp: number;
 }
 
+const COLOR_POOL_SIZE = 6;
+
+const TREE_ICON_COLORS = Array.from({ length: COLOR_POOL_SIZE }, (_, i) => {
+  return new vscode.ThemeColor(`jumpHistory.highlight${i + 1}`);
+});
+
+const EDITOR_BG_COLORS = [
+  'rgba(180, 100, 100, 0.15)',
+  'rgba(100, 140, 100, 0.15)',
+  'rgba(100, 120, 160, 0.15)',
+  'rgba(160, 140, 80, 0.15)',
+  'rgba(140, 100, 140, 0.15)',
+  'rgba(80, 140, 150, 0.15)',
+];
+
 export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<HistoryNode | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -15,6 +30,21 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
   private expanded: boolean = true; // 默认全部展开
   private treeView: vscode.TreeView<HistoryNode> | undefined;
   private nodeParentMap = new Map<HistoryNode, HistoryNode>();
+  private decorationTypes: vscode.TextEditorDecorationType[];
+
+  constructor() {
+    this.decorationTypes = EDITOR_BG_COLORS.map((color) =>
+      vscode.window.createTextEditorDecorationType({
+        backgroundColor: color,
+        isWholeLine: true,
+        overviewRulerColor: color,
+      })
+    );
+  }
+
+  dispose() {
+    this.decorationTypes.forEach((d) => d.dispose());
+  }
 
   registerTreeView(treeView: vscode.TreeView<HistoryNode>) {
     this.treeView = treeView;
@@ -44,7 +74,8 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     let nextNode: HistoryNode | undefined;
     for (let i = this.stack.length - 1; i >= 0; i--) {
       const record = this.stack[i];
-      const node = new HistoryNode(record, nextNode ? [nextNode] : [], i, this.expanded);
+      const colorIndex = i % COLOR_POOL_SIZE;
+      const node = new HistoryNode(record, nextNode ? [nextNode] : [], i, this.expanded, colorIndex);
       if (nextNode) {
         this.nodeParentMap.set(nextNode, node);
       }
@@ -72,11 +103,13 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
         }
       }, 50);
     }
+    this.refreshDecorations();
   }
 
   clear() {
     this.stack = [];
     this._onDidChangeTreeData.fire();
+    this.refreshDecorations();
   }
 
   async expandAll() {
@@ -109,13 +142,44 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     }
   }
 
+  refreshDecorations() {
+    for (const editor of vscode.window.visibleTextEditors) {
+      for (const dt of this.decorationTypes) {
+        editor.setDecorations(dt, []);
+      }
+    }
+
+    for (let i = 0; i < this.stack.length; i++) {
+      const record = this.stack[i];
+      const colorIndex = i % COLOR_POOL_SIZE;
+      const dt = this.decorationTypes[colorIndex];
+
+      const fromEditor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === record.from.uri.toString()
+      );
+      if (fromEditor) {
+        fromEditor.setDecorations(dt, [record.from.range]);
+      }
+
+      const toEditor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === record.to.uri.toString()
+      );
+      if (toEditor) {
+        toEditor.setDecorations(dt, [record.to.range]);
+      }
+    }
+  }
+
   isExpanded(): boolean {
     return this.expanded;
   }
 
   copySelected(nodes: readonly HistoryNode[]) {
-    const lines = nodes.map((node) => {
-      return `${node.label}${node.description || ''}`.trim();
+    const sorted = [...nodes].sort((a, b) => a.depth - b.depth);
+    const lines = sorted.map((node) => {
+      const relPath = vscode.workspace.asRelativePath(node.record.from.uri, false);
+      const line = node.record.from.range.start.line + 1;
+      return `at ${relPath}:${line}`;
     });
     vscode.env.clipboard.writeText(lines.join('\n'));
   }
@@ -129,6 +193,7 @@ export class HistoryNode extends vscode.TreeItem {
     children: HistoryNode[],
     public readonly depth: number,
     expanded: boolean,
+    public readonly colorIndex: number,
   ) {
     const toLine = record.to.range.start.line + 1;
     const fromLine = record.from.range.start.line + 1;
@@ -155,7 +220,7 @@ export class HistoryNode extends vscode.TreeItem {
       title: 'Go to Location',
       arguments: [record.from],
     };
-    this.iconPath = new vscode.ThemeIcon('arrow-right');
+    this.iconPath = new vscode.ThemeIcon('record', TREE_ICON_COLORS[colorIndex]);
     this.contextValue = 'jumpRecord';
   }
 }

@@ -68,17 +68,17 @@
         {
           "command": "jumpHistory.expandAll",
           "when": "view == jumpHistory",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "jumpHistory.collapseAll",
           "when": "view == jumpHistory",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "jumpHistory.clear",
           "when": "view == jumpHistory",
-          "group": "navigation"
+          "group": "navigation@9"
         }
       ]
     },
@@ -88,6 +88,56 @@
         "key": "ctrl+c",
         "mac": "cmd+c",
         "when": "view == jumpHistory && viewItem == jumpRecord"
+      }
+    ],
+    "colors": [
+      {
+        "id": "jumpHistory.highlight1",
+        "description": "Jump History highlight color 1",
+        "defaults": {
+          "dark": "#c87878",
+          "light": "#a05050"
+        }
+      },
+      {
+        "id": "jumpHistory.highlight2",
+        "description": "Jump History highlight color 2",
+        "defaults": {
+          "dark": "#78a078",
+          "light": "#507050"
+        }
+      },
+      {
+        "id": "jumpHistory.highlight3",
+        "description": "Jump History highlight color 3",
+        "defaults": {
+          "dark": "#7896b4",
+          "light": "#507090"
+        }
+      },
+      {
+        "id": "jumpHistory.highlight4",
+        "description": "Jump History highlight color 4",
+        "defaults": {
+          "dark": "#b4a064",
+          "light": "#907040"
+        }
+      },
+      {
+        "id": "jumpHistory.highlight5",
+        "description": "Jump History highlight color 5",
+        "defaults": {
+          "dark": "#a078a0",
+          "light": "#805080"
+        }
+      },
+      {
+        "id": "jumpHistory.highlight6",
+        "description": "Jump History highlight color 6",
+        "defaults": {
+          "dark": "#64a0aa",
+          "light": "#408090"
+        }
       }
     ]
   },
