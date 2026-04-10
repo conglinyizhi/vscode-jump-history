@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { HistoryTreeProvider, JumpRecord } from './historyTreeProvider';
+import { HistoryTreeProvider, HistoryNode, JumpRecord } from './historyTreeProvider';
 
 let historyProvider: HistoryTreeProvider;
 let lastPosition: { uri: vscode.Uri; range: vscode.Range } | undefined;
@@ -10,6 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
   historyProvider = new HistoryTreeProvider();
   const treeView = vscode.window.createTreeView('jumpHistory', {
     treeDataProvider: historyProvider,
+    canSelectMany: true,
   });
   historyProvider.registerTreeView(treeView);
   context.subscriptions.push(treeView);
@@ -46,6 +47,23 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('jumpHistory.expandAll', () => {
       historyProvider.expandAll();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('jumpHistory.copy', (node: HistoryNode) => {
+      const selection = treeView.selection;
+      const targets =
+        node && selection.length > 0 && selection.includes(node)
+          ? selection
+          : node
+            ? [node]
+            : selection.length > 0
+              ? selection
+              : [];
+      if (targets.length > 0) {
+        historyProvider.copySelected(targets);
+      }
     }),
   );
 

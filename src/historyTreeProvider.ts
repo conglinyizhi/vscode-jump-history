@@ -14,6 +14,7 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
   private stack: JumpRecord[] = [];
   private expanded: boolean = true; // 默认全部展开
   private treeView: vscode.TreeView<HistoryNode> | undefined;
+  private nodeParentMap = new Map<HistoryNode, HistoryNode>();
 
   registerTreeView(treeView: vscode.TreeView<HistoryNode>) {
     this.treeView = treeView;
@@ -30,7 +31,12 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     return Promise.resolve(element.children);
   }
 
+  getParent(element: HistoryNode): vscode.ProviderResult<HistoryNode> {
+    return this.nodeParentMap.get(element);
+  }
+
   private buildPath(): HistoryNode[] {
+    this.nodeParentMap.clear();
     if (this.stack.length === 0) {
       return [];
     }
@@ -39,6 +45,9 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     for (let i = this.stack.length - 1; i >= 0; i--) {
       const record = this.stack[i];
       const node = new HistoryNode(record, nextNode ? [nextNode] : [], i, this.expanded);
+      if (nextNode) {
+        this.nodeParentMap.set(nextNode, node);
+      }
       nextNode = node;
     }
 
@@ -50,6 +59,19 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     // 新增节点时自动展开
     this.expanded = true;
     this._onDidChangeTreeData.fire();
+    // 自动 reveal 最新节点
+    if (this.treeView) {
+      setTimeout(() => {
+        const path = this.buildPath();
+        if (path.length > 0) {
+          let deepest = path[0];
+          while (deepest.children.length > 0) {
+            deepest = deepest.children[0];
+          }
+          Promise.resolve(this.treeView!.reveal(deepest, { expand: true, focus: false, select: true })).catch(() => {});
+        }
+      }, 50);
+    }
   }
 
   clear() {
@@ -63,8 +85,10 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     // 通过 TreeView API 递归展开所有节点
     if (this.treeView) {
       const roots = await this.getChildren();
-      for (const root of roots) {
-        await this.expandNode(root);
+      if (roots.length > 0) {
+        setTimeout(() => {
+          this.expandNode(roots[0]);
+        }, 50);
       }
     }
   }
@@ -87,6 +111,13 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
 
   isExpanded(): boolean {
     return this.expanded;
+  }
+
+  copySelected(nodes: readonly HistoryNode[]) {
+    const lines = nodes.map((node) => {
+      return `${node.label}${node.description || ''}`.trim();
+    });
+    vscode.env.clipboard.writeText(lines.join('\n'));
   }
 }
 

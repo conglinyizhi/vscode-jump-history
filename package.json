@@ -49,9 +49,21 @@
         "command": "jumpHistory.collapseAll",
         "title": "Collapse All",
         "icon": "$(collapse-all)"
+      },
+      {
+        "command": "jumpHistory.copy",
+        "title": "Copy Jump Info",
+        "icon": "$(copy)"
       }
     ],
     "menus": {
+      "view/item/context": [
+        {
+          "command": "jumpHistory.copy",
+          "when": "view == jumpHistory",
+          "group": "1_copy@1"
+        }
+      ],
       "view/title": [
         {
           "command": "jumpHistory.expandAll",
@@ -69,7 +81,15 @@
           "group": "navigation"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "jumpHistory.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "view == jumpHistory && viewItem == jumpRecord"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",
