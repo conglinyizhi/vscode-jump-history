@@ -4,6 +4,7 @@ import { HistoryTreeProvider, HistoryNode, JumpRecord } from './historyTreeProvi
 let historyProvider: HistoryTreeProvider;
 let lastPosition: { uri: vscode.Uri; range: vscode.Range } | undefined;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingEditorUpdate: ReturnType<typeof setTimeout> | undefined;
 let isNavigatingFromHistory = false;
 let lastHistoryTarget: { uri: vscode.Uri; range: vscode.Range } | undefined;
 
@@ -28,13 +29,25 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        checkAndRecordJump(editor.document.uri, editor.selection);
+        // 延迟更新 lastPosition，以便跨文件跳转时 selection 事件能用旧值做比较
+        if (pendingEditorUpdate) {
+          clearTimeout(pendingEditorUpdate);
+        }
+        pendingEditorUpdate = setTimeout(() => {
+          updateLastPosition(editor);
+          pendingEditorUpdate = undefined;
+        }, 50);
       }
     }),
   );
 
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((e) => {
+      // 如果编辑器刚切换且 50ms 内触发了 selection，取消延迟更新，让 checkAndRecordJump 用旧 lastPosition 比较
+      if (pendingEditorUpdate) {
+        clearTimeout(pendingEditorUpdate);
+        pendingEditorUpdate = undefined;
+      }
       checkAndRecordJump(e.textEditor.document.uri, e.selections[0]);
     }),
   );
