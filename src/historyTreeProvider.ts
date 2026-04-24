@@ -90,17 +90,11 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     // 新增节点时自动展开
     this.expanded = true;
     this._onDidChangeTreeData.fire();
-    // 自动 reveal 最新节点
+    // 自动 reveal 并展开最新节点所在路径
     if (this.treeView) {
-      setTimeout(() => {
-        const path = this.buildPath();
-        if (path.length > 0) {
-          let deepest = path[0];
-          while (deepest.children.length > 0) {
-            deepest = deepest.children[0];
-          }
-          Promise.resolve(this.treeView!.reveal(deepest, { expand: true, focus: false, select: true })).catch(() => {});
-        }
+      setTimeout(async () => {
+        const roots = await this.getChildren();
+        await this.revealPath(roots, true);
       }, 50);
     }
     this.refreshDecorations();
@@ -115,14 +109,11 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
   async expandAll() {
     this.expanded = true;
     this._onDidChangeTreeData.fire();
-    // 通过 TreeView API 递归展开所有节点
-    if (this.treeView) {
-      const roots = await this.getChildren();
-      if (roots.length > 0) {
-        setTimeout(() => {
-          this.expandNode(roots[0]);
-        }, 50);
-      }
+    if (this.treeView && this.stack.length > 0) {
+      setTimeout(async () => {
+        const roots = await this.getChildren();
+        await this.revealPath(roots, false);
+      }, 50);
     }
   }
 
@@ -135,10 +126,35 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<HistoryNode>
     }
   }
 
-  private async expandNode(node: HistoryNode) {
-    await this.treeView!.reveal(node, { expand: true, focus: false, select: false });
-    for (const child of node.children) {
-      await this.expandNode(child);
+  private getNodePath(root: HistoryNode): HistoryNode[] {
+    const path: HistoryNode[] = [root];
+    let current = root;
+    while (current.children.length > 0) {
+      current = current.children[0];
+      path.push(current);
+    }
+    return path;
+  }
+
+  private async revealPath(roots: HistoryNode[], selectLeaf: boolean) {
+    if (roots.length === 0 || !this.treeView) {
+      return;
+    }
+    const path = this.getNodePath(roots[0]);
+    for (const node of path) {
+      try {
+        await this.treeView.reveal(node, { expand: true, focus: false, select: false });
+      } catch {
+        // ignore
+      }
+    }
+    if (selectLeaf) {
+      const leaf = path[path.length - 1];
+      try {
+        await this.treeView.reveal(leaf, { expand: true, focus: false, select: true });
+      } catch {
+        // ignore
+      }
     }
   }
 
